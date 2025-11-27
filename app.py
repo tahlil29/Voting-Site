@@ -323,8 +323,13 @@ def profile():
 
 # --- 8. Application Run ---
 
-if __name__ == '__main__':
+def start_server():
     with app.app_context():
         initialize_database()
-        
-    app.run(debug=True)
+    # Listen on all interfaces (0.0.0.0) and use the port provided by Render
+    port = int(os.environ.get('PORT', 5000)) 
+    app.run(host='0.0.0.0', port=port)
+
+if __name__ == '__main__':
+    # This block is only for local testing via 'python app.py'
+    start_server()
