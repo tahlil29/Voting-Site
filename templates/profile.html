@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>👤 Edit Profile</h2>
+    <hr>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-lock"></i> Update Password
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save New Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+             <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <i class="fas fa-info-circle"></i> Account Details
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Username:</strong> {{ user.username }}</li>
+                    <li class="list-group-item"><strong>Role:</strong> <span class="badge bg-{{ 'danger' if user.role == 'admin' else 'primary' }}">{{ user.role | upper }}</span></li>
+                    <li class="list-group-item text-muted small">User ID: {{ user.id }}</li>
+                    <li class="list-group-item text-muted small">For changes other than password, please contact an Admin.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    </div>
+
+{% endblock %}

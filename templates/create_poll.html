@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Create New Poll</h2>
+    <hr>
+    
+    <div class="card p-4 shadow-sm">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="title" class="form-label">Poll Question/Title:</label>
+                <input type="text" id="title" name="title" class="form-control" required placeholder="E.g., Which department deserves the team bonus?">
+            </div>
+            
+            <div class="mb-3">
+                <label for="options" class="form-label">Voting Options (Comma-Separated):</label>
+                <textarea id="options" name="options" rows="4" class="form-control" required placeholder="Option A, Option B, Option C, Abstain"></textarea>
+                <div class="form-text">Enter each voting option separated by a comma.</div>
+            </div>
+            
+            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Create Poll</button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+{% endblock %}
