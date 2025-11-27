@@ -3,7 +3,6 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-web: gunicorn app:app
 
 # --- 1. Configuration and App Initialization ---
 app = Flask(__name__)
@@ -32,6 +31,7 @@ class User(db.Model):
 class Poll(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
+    # Options stored as a comma-separated string
     options = db.Column(db.String(500), nullable=False) 
     is_published = db.Column(db.Boolean, default=False) 
     results_published = db.Column(db.Boolean, default=False) 
@@ -46,6 +46,7 @@ class Vote(db.Model):
     poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
     selected_option = db.Column(db.String(100), nullable=False)
     
+    # Ensures a user votes only once per poll
     __table_args__ = (db.UniqueConstraint('user_id', 'poll_id', name='_user_poll_uc'),)
 
 # --- 3. Initial Setup Function ---
