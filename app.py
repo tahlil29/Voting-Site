@@ -179,6 +179,35 @@ def vote(poll_id):
     
     return render_template('vote.html', poll=poll)
 
+@app.route('/results')
+@login_required
+def results():
+    """Displays the results for published polls."""
+    all_polls = poll_sheet.get_all_records()
+    all_votes = vote_sheet.get_all_records()
+    
+    # Filter for polls where results are published
+    published_polls = [p for p in all_polls if str(p['results_published']) == 'TRUE']
+    
+    poll_results = []
+    for poll in published_polls:
+        options = [opt.strip() for opt in str(poll['options']).split(',')]
+        total_votes = sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']))
+        
+        option_counts = {}
+        for option in options:
+            count = sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']) and str(v['selected_option']) == option)
+            percentage = (count / total_votes * 100) if total_votes > 0 else 0
+            option_counts[option] = {'count': count, 'percentage': percentage}
+            
+        poll_results.append({
+            'title': poll['title'],
+            'total_votes': total_votes,
+            'counts': option_counts
+        })
+
+    return render_template('results.html', poll_results=poll_results)
+
 # --- 5. Application Run ---
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
