@@ -6,9 +6,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- 1. Configuration and App Initialization ---
 app = Flask(__name__)
-# IMPORTANT: Use a complex secret key for security
-app.config['SECRET_KEY'] = os.urandom(24) 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24))
+
+# This line checks for the Render database URL; if not found, it uses SQLite
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
