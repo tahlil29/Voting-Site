@@ -30,7 +30,7 @@ vote_sheet = spreadsheet.worksheet("Votes")
 users = user_sheet.get_all_records()
 if not any(u['username'] == 'admin' for u in users):
     user_sheet.append_row(['admin', generate_password_hash('adminpass'), 'admin'])
-    print("Default admin user created in Google Sheet.")
+    print("Default admin user created.")
 
 # --- 2. Helper Decorators ---
 def login_required(f):
@@ -65,7 +65,9 @@ def login():
             session['user_id'] = user['username']
             session['username'] = user['username']
             session['role'] = user['role']
-            return redirect(url_for('admin_dashboard' if user['role'] == 'admin' else 'user_dashboard'))
+            # Redirect based on role
+            target = 'admin_dashboard' if user['role'] == 'admin' else 'user_dashboard'
+            return redirect(url_for(target))
         flash('Invalid credentials.', 'danger')
     return render_template('login.html')
 
@@ -81,20 +83,25 @@ def admin_dashboard():
     polls = poll_sheet.get_all_records()
     return render_template('admin_dashboard.html', polls=polls)
 
-# THIS WAS THE MISSING ROUTE CAUSING YOUR ERROR
 @app.route('/results')
 @login_required
 def results():
     all_polls = poll_sheet.get_all_records()
     all_votes = vote_sheet.get_all_records()
     published_polls = [p for p in all_polls if str(p['results_published']).upper() == 'TRUE']
+    
     poll_results = []
     for poll in published_polls:
         options = [opt.strip() for opt in str(poll['options']).split(',')]
-        total_votes = sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']))
-        counts = {opt: {'count': sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']) and str(v['selected_option']) == opt)} for opt in options}
-        for opt in counts:
-            counts[opt]['percentage'] = (counts[opt]['count'] / total_votes * 100) if total_votes > 0 else 0
+        poll_id = str(poll['id'])
+        total_votes = sum(1 for v in all_votes if str(v['poll_id']) == poll_id)
+        
+        counts = {}
+        for opt in options:
+            count = sum(1 for v in all_votes if str(v['poll_id']) == poll_id and str(v['selected_option']) == opt)
+            percentage = (count / total_votes * 100) if total_votes > 0 else 0
+            counts[opt] = {'count': count, 'percentage': percentage}
+            
         poll_results.append({'title': poll['title'], 'total_votes': total_votes, 'counts': counts})
     return render_template('results.html', poll_results=poll_results)
 
@@ -103,19 +110,21 @@ def results():
 @admin_required
 def create_poll():
     if request.method == 'POST':
-        title, options = request.form.get('title'), request.form.get('options')
+        title = request.form.get('title')
+        options = request.form.get('options')
         new_id = len(poll_sheet.get_all_records()) + 1
         poll_sheet.append_row([new_id, title, options, 'FALSE', 'FALSE'])
         flash('Poll created!', 'success')
         return redirect(url_for('admin_dashboard'))
     return render_template('create_poll.html')
 
-@app.route('/admin/toggle_poll/<int:poll_id>/<action>')
+@app.route('/admin/toggle_poll/<poll_id>/<action>')
 @login_required
 @admin_required
 def toggle_poll(poll_id, action):
     all_polls = poll_sheet.get_all_records()
-    row_idx = next((i for i, p in enumerate(all_polls, 2) if int(p['id']) == poll_id), None)
+    # Handle poll_id as string for comparison
+    row_idx = next((i for i, p in enumerate(all_polls, 2) if str(p['id']) == str(poll_id)), None)
     if row_idx:
         if action == 'publish': poll_sheet.update_cell(row_idx, 4, 'TRUE')
         elif action == 'unpublish': poll_sheet.update_cell(row_idx, 4, 'FALSE')
@@ -126,17 +135,19 @@ def toggle_poll(poll_id, action):
 @app.route('/user')
 @login_required
 def user_dashboard():
-    polls = [p for p in poll_sheet.get_all_records() if str(p['is_published']).upper() == 'TRUE']
-    voted_ids = [str(v['poll_id']) for v in vote_sheet.get_all_records() if v['user_id'] == session['user_id']]
+    all_polls = poll_sheet.get_all_records()
+    polls = [p for p in all_polls if str(p['is_published']).upper() == 'TRUE']
+    voted_ids = [str(v['poll_id']) for v in vote_sheet.get_all_records() if str(v['user_id']) == session['user_id']]
     active_polls = [p for p in polls if str(p['id']) not in voted_ids]
     return render_template('user_dashboard.html', active_polls=active_polls)
 
-@app.route('/vote/<int:poll_id>', methods=['GET', 'POST'])
+@app.route('/vote/<poll_id>', methods=['GET', 'POST'])
 @login_required
 def vote(poll_id):
-    poll = next((p for p in poll_sheet.get_all_records() if int(p['id']) == poll_id), None)
+    all_polls = poll_sheet.get_all_records()
+    poll = next((p for p in all_polls if str(p['id']) == str(poll_id)), None)
     if request.method == 'POST':
-        vote_sheet.append_row([session['user_id'], poll_id, request.form.get('option')])
+        vote_sheet.append_row([session['user_id'], str(poll_id), request.form.get('option')])
         return redirect(url_for('user_dashboard'))
     poll['options_list'] = [opt.strip() for opt in str(poll['options']).split(',')]
     return render_template('vote.html', poll=poll)
