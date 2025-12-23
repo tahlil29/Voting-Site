@@ -27,10 +27,10 @@ poll_sheet = spreadsheet.worksheet("Polls")
 vote_sheet = spreadsheet.worksheet("Votes")
 
 # Initialize Admin User if Sheet is Empty
-with app.app_context():
-    users = user_sheet.get_all_records()
-    if not any(u['username'] == 'admin' for u in users):
-        user_sheet.append_row(['admin', generate_password_hash('adminpass'), 'admin'])
+users = user_sheet.get_all_records()
+if not any(u['username'] == 'admin' for u in users):
+    user_sheet.append_row(['admin', generate_password_hash('adminpass'), 'admin'])
+    print("Default admin user created in Google Sheet.")
 
 # --- 2. Helper Decorators ---
 def login_required(f):
@@ -81,6 +81,7 @@ def admin_dashboard():
     polls = poll_sheet.get_all_records()
     return render_template('admin_dashboard.html', polls=polls)
 
+# THIS WAS THE MISSING ROUTE CAUSING YOUR ERROR
 @app.route('/results')
 @login_required
 def results():
@@ -91,7 +92,7 @@ def results():
     for poll in published_polls:
         options = [opt.strip() for opt in str(poll['options']).split(',')]
         total_votes = sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']))
-        counts = {opt: {'count': sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']) and v['selected_option'] == opt)} for opt in options}
+        counts = {opt: {'count': sum(1 for v in all_votes if str(v['poll_id']) == str(poll['id']) and str(v['selected_option']) == opt)} for opt in options}
         for opt in counts:
             counts[opt]['percentage'] = (counts[opt]['count'] / total_votes * 100) if total_votes > 0 else 0
         poll_results.append({'title': poll['title'], 'total_votes': total_votes, 'counts': counts})
@@ -114,7 +115,6 @@ def create_poll():
 @admin_required
 def toggle_poll(poll_id, action):
     all_polls = poll_sheet.get_all_records()
-    # Find the row index (gspread is 1-indexed + header row)
     row_idx = next((i for i, p in enumerate(all_polls, 2) if int(p['id']) == poll_id), None)
     if row_idx:
         if action == 'publish': poll_sheet.update_cell(row_idx, 4, 'TRUE')
