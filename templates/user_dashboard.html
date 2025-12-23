@@ -6,30 +6,21 @@
     
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-success text-white">
-            <h5 class="mb-0"><i class="fas fa-check-circle"></i> Active Polls (Ready to Vote)</h5>
+            <h5 class="mb-0"><i class="fas fa-check-circle"></i> Active Polls</h5>
         </div>
         <div class="list-group list-group-flush">
             {% if active_polls %}
                 {% for poll in active_polls %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <strong class="h6 mb-0">{{ poll.title }}</strong> 
-                        <a href="{{ url_for('vote', poll_id=poll.id) }}" class="btn btn-primary btn-sm"><i class="fas fa-hand-pointer"></i> Vote Now</a>
+                        <strong class="h6 mb-0">{{ poll['title'] }}</strong> 
+                        <a href="{{ url_for('vote', poll_id=poll['id']) }}" class="btn btn-primary btn-sm">Vote Now</a>
                     </li>
                 {% endfor %}
             {% else %}
                 <li class="list-group-item">
-                    <div class="alert alert-warning mb-0" role="alert">
-                        No polls are currently open for you to vote on. Check back later!
-                    </div>
+                    <div class="alert alert-warning mb-0">No polls open for voting right now.</div>
                 </li>
             {% endif %}
         </div>
     </div>
-    
-    <div class="mt-4">
-        <a href="{{ url_for('profile') }}" class="btn btn-secondary">
-            <i class="fas fa-user-edit"></i> View/Edit Profile
-        </a>
-    </div>
-
 {% endblock %}
