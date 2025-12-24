@@ -70,15 +70,15 @@ class Vote(db.Model):
 # Initialize Database
 # -----------------------------
 def initialize_database():
-    db.create_all()
+    with app.app_context():
+        db.create_all()
 
-    # Create default admin
-    if not User.query.filter_by(username='admin').first():
-        admin = User(username='admin', role='admin')
-        admin.set_password('adminpass')  # CHANGE AFTER FIRST LOGIN
-        db.session.add(admin)
-        db.session.commit()
-        print("✅ Admin user created (username: admin, password: adminpass)")
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', role='admin')
+            admin.set_password('adminpass')
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ Admin user created")
 
 # -----------------------------
 # Decorators
@@ -291,6 +291,10 @@ def start_server():
 
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+@app.before_first_request
+def setup_database():
+    initialize_database()
 
 
 if __name__ == '__main__':
