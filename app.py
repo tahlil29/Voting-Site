@@ -148,6 +148,30 @@ def handle_message(data):
         "time": msg.timestamp.strftime("%H:%M")
     }, broadcast=True)
 
+@app.route("/results")
+@login_required
+def results():
+    published_polls = Poll.query.filter_by(results_published=True).all()
+    results_data = []
+
+    for poll in published_polls:
+        options = [o.strip() for o in poll.options.split(",")]
+        counts = {}
+
+        for opt in options:
+            counts[opt] = Vote.query.filter_by(
+                poll_id=poll.id,
+                selected_option=opt
+            ).count()
+
+        results_data.append({
+            "poll": poll,
+            "counts": counts
+        })
+
+    return render_template("results.html", results_data=results_data)
+
+
 # -------- ADMIN --------
 @app.route("/admin")
 @login_required
@@ -176,12 +200,15 @@ def create_poll():
 @admin_required
 def edit_poll(poll_id):
     poll = Poll.query.get_or_404(poll_id)
+
     if request.method == "POST":
         poll.title = request.form["title"]
         poll.options = request.form["options"]
-        poll.allow_multiple = "allow_multiple" in request.form
+        poll.allow_multiple = bool(request.form.get("allow_multiple"))
         db.session.commit()
+        flash("Poll updated successfully", "success")
         return redirect(url_for("admin_dashboard"))
+
     return render_template("edit_poll.html", poll=poll)
 
 @app.route("/admin/delete_poll/<int:poll_id>")
@@ -284,8 +311,11 @@ def inject_announcement():
 @app.route("/user")
 @login_required
 def user_dashboard():
-    polls = Poll.query.filter_by(is_published=True).all()
-    return render_template("user_dashboard.html", polls=polls)
+    active_polls = Poll.query.filter(Poll.is_published == True).all()
+    return render_template(
+        "user_dashboard.html",
+        active_polls=active_polls
+    )
 
 @app.route("/vote/<int:poll_id>", methods=["GET", "POST"])
 @login_required
@@ -296,24 +326,17 @@ def vote(poll_id):
         return redirect(url_for("user_dashboard"))
 
     if request.method == "POST":
-        choices = request.form.getlist("option")
-        for c in choices:
+        for choice in request.form.getlist("option"):
             db.session.add(Vote(
                 user_id=session["user_id"],
                 poll_id=poll_id,
-                selected_option=c
+                selected_option=choice
             ))
         db.session.commit()
         return redirect(url_for("user_dashboard"))
 
     options = [o.strip() for o in poll.options.split(",")]
     return render_template("vote.html", poll=poll, options=options)
-
-@app.route("/results")
-@login_required
-def results():
-    polls = Poll.query.filter_by(results_published=True).all()
-    return render_template("results.html", polls=polls)
 
 # -------- PROFILE --------
 @app.route("/profile", methods=["GET", "POST"])
@@ -331,4 +354,3 @@ def profile():
 # -------- RUN --------
 if __name__ == "__main__":
     socketio.run(app, debug=True)
-

@@ -44,10 +44,11 @@
                 <div class="d-flex flex-wrap gap-1 justify-content-center">
 
                     <!-- Edit -->
+                    {% for p in polls %}
                     <a href="{{ url_for('edit_poll', poll_id=p.id) }}"
-                       class="btn btn-sm btn-primary">
-                        Edit
-                    </a>
+                        class="btn btn-sm btn-secondary">
+                        Edit</a>
+                    {% endfor %}
 
                     <!-- Publish / Unpublish -->
                     {% if p.is_published %}
