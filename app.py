@@ -15,10 +15,13 @@ app.config['SECRET_KEY'] = os.environ.get(
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
+
+if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# FORCE psycopg v3 (Python 3.13 fix)
+# Force psycopg v3 (Python 3.13 compatible)
 DATABASE_URL = DATABASE_URL.replace(
     "postgresql://", "postgresql+psycopg://"
 )
@@ -26,13 +29,14 @@ DATABASE_URL = DATABASE_URL.replace(
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ✅ db MUST be defined BEFORE models
 db = SQLAlchemy(app)
 
 # -----------------------------
 # Database Models
 # -----------------------------
 class User(db.Model):
+    __tablename__ = "users"   # ✅ FIX: avoid reserved keyword
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
@@ -46,6 +50,8 @@ class User(db.Model):
 
 
 class Poll(db.Model):
+    __tablename__ = "polls"
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     options = db.Column(db.String(500), nullable=False)
@@ -57,9 +63,11 @@ class Poll(db.Model):
 
 
 class Vote(db.Model):
+    __tablename__ = "votes"
+
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    poll_id = db.Column(db.Integer, db.ForeignKey('polls.id'), nullable=False)
     selected_option = db.Column(db.String(100), nullable=False)
 
     __table_args__ = (
@@ -78,7 +86,6 @@ def initialize_database():
         db.session.add(admin)
         db.session.commit()
         print("✅ Admin user created")
-
 
 # -----------------------------
 # Decorators
@@ -292,12 +299,6 @@ def start_server():
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
 
-def start_server():
-    with app.app_context():
-        initialize_database()
-
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
 
 if __name__ == '__main__':
     start_server()
