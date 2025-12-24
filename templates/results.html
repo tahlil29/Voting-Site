@@ -1,62 +1,21 @@
 {% extends "base.html" %}
-
 {% block content %}
-    <h1>📊 Official Results Window</h1>
-    <hr>
-    
-    {% if poll_results %}
-        {% for result in poll_results %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">{{ result.title }}</h4>
-                </div>
-                <div class="card-body">
-                    <p class="mb-3"><strong>Total Votes Cast:</strong> <span class="badge bg-dark fs-6">{{ result.total_votes }}</span></p>
-                    
-                    {% if result.total_votes == 0 %}
-                        <div class="alert alert-warning" role="alert">
-                            No votes have been cast yet for this poll.
-                        </div>
-                    {% else %}
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Option</th>
-                                        <th style="width: 10%;">Votes</th>
-                                        <th style="width: 15%;">Percentage</th>
-                                        <th style="width: 45%;">Bar</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for option, data in result.counts.items() %}
-                                        <tr>
-                                            <td>{{ option }}</td>
-                                            <td>{{ data.count }}</td>
-                                            <td><strong class="text-primary">{{ "%.2f"|format(data.percentage) }}%</strong></td>
-                                            <td>
-                                                <div class="progress" style="height: 25px;">
-                                                    <div class="progress-bar bg-primary" role="progressbar" 
-                                                         style="width: {{ data.percentage }}%;" 
-                                                         aria-valuenow="{{ data.percentage }}" 
-                                                         aria-valuemin="0" 
-                                                         aria-valuemax="100">
-                                                        {{ "%.0f"|format(data.percentage) }}%
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        {% endfor %}
-    {% else %}
-        <div class="alert alert-info" role="alert">
-            No poll results have been published by the Admin yet.
+
+<h4>📊 Results</h4>
+
+{% for item in data %}
+<div class="card p-4 mb-4">
+    <h5>{{ item.poll.title }}</h5>
+
+    {% for opt, val in item.counts.items() %}
+    <p class="mb-1">{{ opt }} ({{ val[0] }} votes)</p>
+    <div class="progress mb-2">
+        <div class="progress-bar bg-success" style="width: {{ val[1] }}%">
+            {{ "%.1f"|format(val[1]) }}%
         </div>
-    {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
 {% endblock %}

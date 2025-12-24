@@ -1,84 +1,588 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Office Voting System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .navbar { background-color: #004d40 !important; } /* Deep Teal for branding */
-        .navbar-brand, .nav-link { color: white !important; }
-        .navbar-nav .nav-link:hover { color: #bdbdbd !important; }
-        .container-fluid { max-width: 1100px; }
-        .main-content { padding: 30px 15px; background-color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 20px; min-height: 80vh; }
-    </style>
+<meta charset="UTF-8">
+<title>Office Voting System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+/* ================= ROOT THEME ================= */
+:root {
+    --bg-light: #f4f6f9;
+    --bg-dark: #020617;
+    --card-light: #ffffff;
+    --card-dark: rgba(255,255,255,0.08);
+    --border-dark: rgba(255,255,255,0.18);
+    --text-light: #000;
+    --text-dark: #e8ebf1;
+    --text-muted-dark: #a0a6b8;
+    --primary: #4f9cff;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #facc15;
+}
+
+/* ================= BASE ================= */
+body {
+    background: var(--bg-light);
+    color: var(--text-light);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body.dark {
+    background: radial-gradient(circle at top, #111827, #020617);
+    color: var(--text-dark);
+}
+
+/* ================= NAVBAR ================= */
+.navbar {
+    background: linear-gradient(90deg, #2563eb, #4f9cff);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+body.dark .navbar {
+    background: linear-gradient(90deg, #020617, #0f172a);
+    border-bottom: 1px solid var(--border-dark);
+}
+
+/* ================= CARDS ================= */
+.card {
+    background: var(--card-light);
+    border-radius: 16px;
+}
+
+body.dark .card,
+body.dark .table,
+body.dark .modal-content {
+    background: var(--card-dark);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border-dark);
+    box-shadow: 0 15px 50px rgba(0,0,0,.6);
+}
+
+/* ================= TABLE ================= */
+body.dark table th {
+    background: rgba(255,255,255,0.12);
+    color: var(--text-dark);
+}
+
+body.dark table td {
+    color: var(--text-dark);
+}
+
+/* ================= INPUTS ================= */
+body.dark input,
+body.dark select,
+body.dark textarea {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 12px;
+}
+
+body.dark input::placeholder {
+    color: var(--text-muted-dark);
+}
+
+/* ================= BUTTONS ================= */
+.btn {
+    border-radius: 999px;
+    transition: all .25s ease;
+}
+
+body.dark .btn-primary {
+    background: linear-gradient(135deg, #4f9cff, #00ffd5);
+    border: none;
+    color: #000;
+}
+
+body.dark .btn-success {
+    background: linear-gradient(135deg, #22c55e, #86efac);
+    color: #000;
+}
+
+body.dark .btn-danger {
+    background: linear-gradient(135deg, #ef4444, #ff9a9a);
+    color: #000;
+}
+
+body.dark .btn-warning {
+    background: linear-gradient(135deg, #facc15, #fde68a);
+    color: #000;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+/* ================= ALERT FIX (IMPORTANT) ================= */
+body.dark .alert {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-dark);
+    color: var(--text-dark);
+}
+
+body.dark .alert-info {
+    background: rgba(79,156,255,0.15);
+    color: #e8ebf1;
+}
+
+body.dark .alert-success {
+    background: rgba(34,197,94,0.15);
+}
+
+body.dark .alert-warning {
+    background: rgba(250,204,21,0.15);
+}
+
+body.dark .alert-danger {
+    background: rgba(239,68,68,0.15);
+}
+
+
+body.dark .text-muted {
+    color: var(--text-muted-dark) !important;
+}
+
+body.dark .text-dark {
+    color: var(--text-dark) !important;
+}
+
+/* ================= SELECTION FIX ================= */
+body.dark ::selection {
+    background: #4f9cff;
+    color: #ffffff;
+}
+
+/* ================= FOOTER ================= */
+.app-footer {
+    margin-top: auto;
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    font-size: .85rem;
+    padding: 14px;
+}
+
+body.dark .app-footer {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-dark);
+    border-top: 1px solid var(--border-dark);
+}
+
+
+.nav-chat {
+    position:fixed;
+    top:70px;
+    right:20px;
+    width:360px;
+    height:420px;
+    background:white;
+    border-radius:14px;
+    display:none;
+    flex-direction:column;
+    box-shadow:0 20px 40px rgba(0,0,0,.3);
+    z-index:9999;
+}
+
+.nav-chat.open { display:flex; }
+
+.nav-chat-header {
+    padding:12px;
+    background:linear-gradient(135deg,#4f9cff,#00ffd5);
+    font-weight:600;
+    display:flex;
+    justify-content:space-between;
+}
+
+.nav-chat-messages {
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+}
+
+.nav-chat-input {
+    display:flex;
+    gap:6px;
+    padding:10px;
+}
+
+.app-footer {
+    margin-top:auto;
+    text-align:center;
+    padding:12px;
+    font-size:.85rem;
+}
+
+/* ================= SAFE DARK MODE TEXT SYSTEM ================= */
+
+/* Default text */
+body.dark {
+    color: #e5e7eb;
+}
+
+/* Headings */
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark h5,
+body.dark h6 {
+    color: #f9fafb;
+}
+
+/* Paragraphs & labels */
+body.dark p,
+body.dark label,
+body.dark li,
+body.dark span,
+body.dark small {
+    color: #e5e7eb;
+}
+
+/* Muted text */
+body.dark .text-muted {
+    color: #9ca3af !important;
+}
+
+/* Links */
+body.dark a:not(.btn) {
+    color: #60a5fa;
+}
+
+/* Tables */
+body.dark table {
+    background: transparent;
+}
+
+body.dark table th {
+    background: rgba(255,255,255,0.08);
+    color: #f9fafb;
+}
+
+body.dark table td {
+    background: transparent;
+    color: #e5e7eb;
+}
+
+/* Alerts */
+body.dark .alert {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #e5e7eb;
+}
+
+/* Cards & empty states */
+body.dark .card,
+body.dark .alert-info,
+body.dark .alert-light {
+    background: rgba(255,255,255,0.08) !important;
+    color: #e5e7eb;
+}
+
+/* Empty poll / info boxes */
+body.dark .bg-light {
+    background: rgba(255,255,255,0.06) !important;
+    color: #e5e7eb;
+}
+
+/* ===== ANNOUNCEMENT BANNER ===== */
+.announcement-bar {
+    background: linear-gradient(135deg, #facc15, #fde68a);
+    color: #000;
+    padding: 10px 16px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid #eab308;
+}
+
+body.dark .announcement-bar {
+    background: linear-gradient(135deg, #4f9cff, #00ffd5);
+    color: #000;
+}
+
+.navbar .btn,
+.navbar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.navbar .nav-link {
+    padding: 6px 10px;
+    border-radius: 999px;
+}
+
+.navbar .nav-link:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* ===== PRO NAVBAR ===== */
+.pro-navbar {
+  background: linear-gradient(90deg, #2563eb, #4f9cff);
+  padding: 12px 0;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+}
+
+body.dark .pro-navbar {
+  background: linear-gradient(90deg, #020617, #0f172a);
+}
+
+/* Brand */
+.navbar-brand span {
+  font-size: 1.1rem;
+  letter-spacing: .5px;
+}
+
+/* Nav links */
+.nav-link {
+  font-weight: 500;
+  color: #fff !important;
+  opacity: .9;
+}
+
+.nav-link:hover {
+  opacity: 1;
+}
+
+/* User pill */
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,.15);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: .85rem;
+  color: #fff;
+}
+
+/* Dark mode icon button */
+.theme-switch {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255,255,255,.2);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all .3s ease;
+}
+
+.theme-switch:hover {
+  transform: rotate(15deg);
+  background: rgba(255,255,255,.35);
+}
+
+/* Logout icon */
+.logout-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffdd57;
+  transition: all .3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255,255,255,.35);
+  transform: translateY(-2px);
+}
+
+/* Dark mode colors */
+body.dark .nav-link,
+body.dark .user-pill,
+body.dark .logout-btn {
+  color: #e8ebf1 !important;
+}
+
+</style>
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('login') }}"><i class="fas fa-vote-yea"></i> GITS Poll</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">Home</a>
-                    </li>
-                    {% if session.get('user_id') %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('results') }}">Results</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Contact Us</a>
-                    </li>
-                    {% endif %}
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    {% if session.get('user_id') %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle"></i> {{ session['username'] }} ({{ session['role'] | upper }})
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                {% if session['role'] == 'admin' %}
-                                <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-cog"></i> Admin Dashboard</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% endif %}
-                                <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-edit"></i> Edit Profile</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="btn btn-outline-light" href="{{ url_for('login') }}">Login</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
 
-    <div class="container-fluid">
-        <div class="main-content">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        {% set bs_class = 'alert-success' if category == 'success' else ('alert-danger' if category == 'danger' else ('alert-warning' if category == 'warning' else 'alert-info')) %}
-                        <div class="alert {{ bs_class }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            {% block content %}{% endblock %}
+    {% if global_announcement %}
+<div class="announcement-bar">
+    📢 {{ global_announcement.message }}
+</div>
+{% endif %}
+
+<nav class="navbar navbar-expand-lg pro-navbar">
+  <div class="container-fluid px-4">
+
+    <!-- LEFT: BRAND -->
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('user_dashboard') if session.get('role')=='user' else url_for('admin_dashboard') }}">
+      🗳 <span>Office Voting</span>
+    </a>
+
+    <!-- MOBILE TOGGLE -->
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- CENTER + RIGHT -->
+    <div class="collapse navbar-collapse" id="mainNav">
+
+      <!-- CENTER LINKS -->
+      <ul class="navbar-nav mx-auto gap-3">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('user_dashboard') if session.get('role')=='user' else url_for('admin_dashboard') }}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('results') }}">Results</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Contact Us</a>
+        </li>
+      </ul>
+
+      <!-- RIGHT ACTIONS -->
+      <div class="d-flex align-items-center gap-3">
+
+        <!-- USER NAME -->
+        <div class="user-pill">
+          <i class="fa-solid fa-user"></i>
+          <span>{{ session.get("username") }}</span>
         </div>
+
+        <!-- DARK MODE TOGGLE (ICON ONLY) -->
+        <button id="themeToggle" class="theme-switch" title="Toggle theme">
+          🌙
+        </button>
+
+        <!-- LOGOUT -->
+        <a href="{{ url_for('logout') }}" class="logout-btn">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+
+      </div>
     </div>
+  </div>
+</nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<div id="navChatBox" class="nav-chat">
+    <div class="nav-chat-header">
+        💬 Office Chat
+        <span onclick="toggleNavChat()" style="cursor:pointer">✖</span>
+    </div>
+    <div id="chatMessages" class="nav-chat-messages"></div>
+    <div class="nav-chat-input">
+        <input id="chatInput" class="form-control" placeholder="Type message...">
+        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<div class="container my-4">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for cat, msg in messages %}
+<div class="alert alert-{{ cat }} alert-dismissible fade show">
+    {{ msg }}
+    <button class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+</div>
+
+<footer class="app-footer">
+<div>© 2025 <strong>Voting System</strong> · Built with ❤️ using Flask</div>
+<div class="small">Secure • Fast • Reliable</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const toggleBtn = document.getElementById("themeToggle");
+
+function applyTheme(theme) {
+    if (theme === "dark") {
+        document.body.classList.add("dark");
+        toggleBtn.innerHTML = "☀";
+    } else {
+        document.body.classList.remove("dark");
+        toggleBtn.innerHTML = "🌙";
+    }
+}
+
+const savedTheme = localStorage.getItem("theme") || "dark";
+applyTheme(savedTheme);
+
+toggleBtn.addEventListener("click", () => {
+    const newTheme = document.body.classList.contains("dark") ? "light" : "dark";
+    localStorage.setItem("theme", newTheme);
+    applyTheme(newTheme);
+});
+</script>
+
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+
+function toggleNavChat(){
+    document.getElementById("navChatBox").classList.toggle("open");
+}
+
+function sendMessage(){
+    const input = document.getElementById("chatInput");
+    if(!input.value.trim()) return;
+    socket.emit("send_message",{message:input.value});
+    input.value="";
+}
+
+socket.on("receive_message",data=>{
+    const box=document.getElementById("chatMessages");
+    box.innerHTML += `<div><strong>${data.username}</strong> (${data.role})<br>${data.message}<small class="text-muted d-block">${data.time}</small><hr></div>`;
+    box.scrollTop=box.scrollHeight;
+});
+</script>
+
+
+<script>
+document.getElementById("userSearch").addEventListener("keyup", function () {
+    const value = this.value.toLowerCase();
+    document.querySelectorAll(".user-row").forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(value)
+            ? ""
+            : "none";
+    });
+});
+</script>
+
+<script>
+const toggleBtn = document.getElementById("themeToggle");
+
+function applyTheme(theme) {
+  if (theme === "dark") {
+    document.body.classList.add("dark");
+    toggleBtn.textContent = "☀";
+  } else {
+    document.body.classList.remove("dark");
+    toggleBtn.textContent = "🌙";
+  }
+}
+
+const savedTheme = localStorage.getItem("theme") || "dark";
+applyTheme(savedTheme);
+
+toggleBtn.addEventListener("click", () => {
+  const newTheme = document.body.classList.contains("dark") ? "light" : "dark";
+  localStorage.setItem("theme", newTheme);
+  applyTheme(newTheme);
+});
+</script>
+
+
 </body>
 </html>

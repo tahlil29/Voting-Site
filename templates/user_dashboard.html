@@ -1,35 +1,66 @@
 {% extends "base.html" %}
-
 {% block content %}
-    <h1>👋 Welcome, {{ session['username'] }}</h1>
-    <hr>
-    
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0"><i class="fas fa-check-circle"></i> Active Polls (Ready to Vote)</h5>
-        </div>
-        <div class="list-group list-group-flush">
-            {% if active_polls %}
-                {% for poll in active_polls %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <strong class="h6 mb-0">{{ poll.title }}</strong> 
-                        <a href="{{ url_for('vote', poll_id=poll.id) }}" class="btn btn-primary btn-sm"><i class="fas fa-hand-pointer"></i> Vote Now</a>
-                    </li>
-                {% endfor %}
-            {% else %}
-                <li class="list-group-item">
-                    <div class="alert alert-warning mb-0" role="alert">
-                        No polls are currently open for you to vote on. Check back later!
-                    </div>
-                </li>
-            {% endif %}
+
+<div class="mb-4">
+    <h2 class="fw-bold">👋 Welcome back</h2>
+    <p class="text-muted">Vote in active polls and view published results</p>
+</div>
+
+<!-- STATS -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <h5>🗳 Active Polls</h5>
+            <h2 class="fw-bold">{{ active_polls|length }}</h2>
         </div>
     </div>
-    
-    <div class="mt-4">
-        <a href="{{ url_for('profile') }}" class="btn btn-secondary">
-            <i class="fas fa-user-edit"></i> View/Edit Profile
-        </a>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <h5>✅ Votes Cast</h5>
+            <h2 class="fw-bold">{{ voted_count or 0 }}</h2>
+        </div>
     </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <h5>📊 Results</h5>
+            <h2 class="fw-bold">{{ results_count or 0 }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <h5>🕒 Last Activity</h5>
+            <small class="text-muted">Today</small>
+        </div>
+    </div>
+</div>
+
+<!-- ACTIVE POLLS -->
+<h4 class="mb-3">🗳 Active Polls</h4>
+
+{% if active_polls %}
+<div class="row g-3">
+    {% for poll in active_polls %}
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h5 class="fw-bold">{{ poll.title }}</h5>
+
+            <span class="badge mb-3">
+                {{ "Multiple Choice" if poll.allow_multiple else "Single Choice" }}
+            </span>
+
+            <a href="{{ url_for('vote', poll_id=poll.id) }}"
+               class="btn btn-primary w-100">
+               Vote Now
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info text-center p-4">
+    😕 No active polls right now.<br>
+    Please check back later.
+</div>
+{% endif %}
 
 {% endblock %}

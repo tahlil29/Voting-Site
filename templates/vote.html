@@ -1,23 +1,20 @@
 {% extends "base.html" %}
-
 {% block content %}
-    <h2>🗳️ Cast Your Vote: **{{ poll.title }}**</h2>
-    <hr>
-    
-    <div class="card p-4 shadow-sm">
-        <form method="POST">
-            {% for option in poll.get_options_list() %}
-                <div class="form-check p-3 mb-2 border rounded">
-                    <input class="form-check-input" type="radio" id="option_{{ loop.index }}" name="option" value="{{ option }}" required style="transform: scale(1.5);">
-                    <label class="form-check-label fw-bold ms-2" for="option_{{ loop.index }}">
-                        {{ option }}
-                    </label>
-                </div>
-            {% endfor %}
-            
-            <div class="mt-4">
-                <button type="submit" class="btn btn-success btn-lg w-100"><i class="fas fa-paper-plane"></i> Cast Vote</button>
-            </div>
-        </form>
-    </div>
+
+<h4>{{ poll.title }}</h4>
+
+<form method="POST" class="card p-4 shadow">
+    {% for opt in poll.option_list() %}
+        <div class="form-check mb-2">
+            <input class="form-check-input"
+                   type="{{ 'checkbox' if poll.allow_multiple else 'radio' }}"
+                   name="option"
+                   value="{{ opt }}">
+            <label class="form-check-label">{{ opt }}</label>
+        </div>
+    {% endfor %}
+
+    <button class="btn btn-success mt-3">Submit Vote</button>
+</form>
+
 {% endblock %}

@@ -1,27 +1,115 @@
 {% extends "base.html" %}
-
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow-lg mt-5">
-                <div class="card-header text-center bg-primary text-white">
-                    <h3>👤 Login </h3>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted text-center small"></p>
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label for="username" class="form-label"><i class="fas fa-user"></i> Username</label>
-                            <input type="text" id="username" name="username" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label"><i class="fas fa-lock"></i> Password</label>
-                            <input type="password" id="password" name="password" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-sign-in-alt"></i> Log In</button>
-                    </form>
-                </div>
-            </div>
+
+<div class="d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card p-4 shadow-lg login-card">
+
+        <div class="text-center mb-4">
+            <h2 class="fw-bold gradient-text">🗳 Voting System</h2>
+            <p class="text-muted">Login to continue</p>
         </div>
+
+        <!-- LOGIN FORM -->
+        <form id="loginForm">
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" id="email" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" id="password" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                🔐 Login
+            </button>
+        </form>
+
+        <div id="errorBox" class="alert alert-danger mt-3 d-none"></div>
+
     </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+/* ---------- FIREBASE CONFIG ---------- */
+const firebaseConfig = {
+    apiKey: "AIzaSyAJpvK4NQzeUmXgPEuxzaWGbUv2ieb5Akw",
+    authDomain: "voting-login-ff3fc.firebaseapp.com",
+    projectId: "voting-login-ff3fc",
+    storageBucket: "voting-login-ff3fc.appspot.com",
+    messagingSenderId: "552547077046",
+    appId: "1:552547077046:web:dc294d6db8af5a197c0f17"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+/* ---------- EMAIL LOGIN ---------- */
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const errorBox = document.getElementById("errorBox");
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then(userCred => userCred.user.getIdToken())
+        .then(idToken => {
+            return fetch("/firebase-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ idToken })
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                errorBox.innerText = "Login failed";
+                errorBox.classList.remove("d-none");
+            }
+        })
+        .catch(err => {
+            errorBox.innerText = err.message;
+            errorBox.classList.remove("d-none");
+        });
+});
+</script>
+
+<style>
+/* ===== PRO LOGIN UI ===== */
+.login-card {
+    width: 100%;
+    max-width: 380px;
+    border-radius: 20px;
+    backdrop-filter: blur(15px);
+}
+
+body.dark .login-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #4f9cff, #00ffd5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.login-card input {
+    border-radius: 12px;
+}
+
+.login-card button {
+    border-radius: 999px;
+    font-weight: 600;
+}
+</style>
+
 {% endblock %}

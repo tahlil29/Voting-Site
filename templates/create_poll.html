@@ -1,24 +1,25 @@
 {% extends "base.html" %}
-
 {% block content %}
-    <h2>Create New Poll</h2>
-    <hr>
-    
-    <div class="card p-4 shadow-sm">
-        <form method="POST">
-            <div class="mb-3">
-                <label for="title" class="form-label">Poll Question/Title:</label>
-                <input type="text" id="title" name="title" class="form-control" required placeholder="E.g., Which department deserves the team bonus?">
-            </div>
-            
-            <div class="mb-3">
-                <label for="options" class="form-label">Voting Options (Comma-Separated):</label>
-                <textarea id="options" name="options" rows="4" class="form-control" required placeholder="Option A, Option B, Option C, Abstain"></textarea>
-                <div class="form-text">Enter each voting option separated by a comma.</div>
-            </div>
-            
-            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Create Poll</button>
-            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
-        </form>
+
+<h4>Create Poll</h4>
+
+<form method="POST" class="card p-4 shadow">
+    <div class="mb-3">
+        <label class="form-label">Poll Title</label>
+        <input name="title" class="form-control" required>
     </div>
+
+    <div class="mb-3">
+        <label class="form-label">Options (comma separated)</label>
+        <textarea name="options" class="form-control" required></textarea>
+    </div>
+
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="allow_multiple">
+        <label class="form-check-label">Allow multiple selection</label>
+    </div>
+
+    <button class="btn btn-success">Create</button>
+</form>
+
 {% endblock %}
