@@ -1,4 +1,3 @@
-# app.py
 import os
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -10,22 +9,25 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # -----------------------------
 app = Flask(__name__)
 
-# SECRET KEY (do NOT use os.urandom in production)
 app.config['SECRET_KEY'] = os.environ.get(
     "SECRET_KEY", "dev-secret-key-change-this"
 )
 
-# PostgreSQL Database Config (Render compatible)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace(
+# FORCE psycopg v3 (Python 3.13 fix)
+DATABASE_URL = DATABASE_URL.replace(
     "postgresql://", "postgresql+psycopg://"
 )
 
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# ✅ db MUST be defined BEFORE models
+db = SQLAlchemy(app)
 
 # -----------------------------
 # Database Models
@@ -34,7 +36,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(10), default='user')  # admin / user
+    role = db.Column(db.String(10), default='user')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
