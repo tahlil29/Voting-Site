@@ -1,335 +1,330 @@
 # app.py
-import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
+from functools import wraps
+from flask_socketio import SocketIO, emit
+from datetime import datetime
+    
 
-# --- 1. Configuration and App Initialization ---
+# -------- FIREBASE --------
+import firebase_admin
+from firebase_admin import credentials, auth
+
+# -------- APP CONFIG --------
 app = Flask(__name__)
-# IMPORTANT: Use a complex secret key for security
-app.config['SECRET_KEY'] = os.urandom(24) 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+socketio = SocketIO(app, cors_allowed_origins="*")
+app.config["SECRET_KEY"] = "super-secret-key"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 db = SQLAlchemy(app)
 
-# --- 2. Database Models ---
+# -------- FIREBASE INIT --------
+if not firebase_admin._apps:
+    cred = credentials.Certificate("firebase_key.json")
+    firebase_admin.initialize_app(cred)
 
+# -------- MODELS --------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(10), default='user') # 'admin' or 'user'
-    
-    def set_password(self, password):
-        """Hashes the password and sets the password_hash field."""
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        """Checks if the provided password matches the stored hash."""
-        return check_password_hash(self.password_hash, password)
+    username = db.Column(db.String(120), unique=True, nullable=False)  # EMAIL
+    full_name = db.Column(db.String(120), default="")
+    password_hash = db.Column(db.String(200))
+    role = db.Column(db.String(10), default="user")
 
 class Poll(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    # Options stored as a comma-separated string
-    options = db.Column(db.String(500), nullable=False) 
-    is_published = db.Column(db.Boolean, default=False) 
-    results_published = db.Column(db.Boolean, default=False) 
-    
-    def get_options_list(self):
-        """Converts the comma-separated options string to a list."""
-        return [opt.strip() for opt in self.options.split(',')]
+    title = db.Column(db.String(200))
+    options = db.Column(db.Text)
+    allow_multiple = db.Column(db.Boolean, default=False)
+    is_published = db.Column(db.Boolean, default=False)
+    results_published = db.Column(db.Boolean, default=False)
 
 class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False)
-    selected_option = db.Column(db.String(100), nullable=False)
-    
-    # Ensures a user votes only once per poll
-    __table_args__ = (db.UniqueConstraint('user_id', 'poll_id', name='_user_poll_uc'),)
+    user_id = db.Column(db.Integer)
+    poll_id = db.Column(db.Integer)
+    selected_option = db.Column(db.String(200))
 
-# --- 3. Initial Setup Function ---
-def initialize_database():
-    """Creates all database tables and the initial admin user if they don't exist."""
-    db.create_all() 
-    
-    # Create an initial 'admin' user if one does not exist
-    if not User.query.filter_by(username='admin').first():
-        admin_user = User(username='admin', role='admin')
-        admin_user.set_password('adminpass') # !!! CHANGE THIS FOR PRODUCTION !!!
-        db.session.add(admin_user)
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120))
+    role = db.Column(db.String(10))
+    message = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+class Announcement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    message = db.Column(db.Text, nullable=False)
+    active = db.Column(db.Boolean, default=True)
+
+# -------- DB INIT --------
+with app.app_context():
+    db.create_all()
+
+    if not User.query.filter_by(username="admin@gmail.com").first():
+        admin = User(
+            username="admin@gmail.com",
+            full_name="Admin",
+            role="admin",
+            password_hash=generate_password_hash("admin")
+        )
+        db.session.add(admin)
         db.session.commit()
-        print("Initial 'admin' user created with password 'adminpass'")
 
-# --- 4. Helper Functions (Decorators) ---
-
+# -------- DECORATORS --------
 def login_required(f):
-    """Decorator to require user login."""
-    def wrap(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please log in to access this page.', 'warning')
-            return redirect(url_for('login'))
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
-    wrap.__name__ = f.__name__
-    return wrap
+    return wrapper
 
 def admin_required(f):
-    """Decorator to require admin role."""
-    def wrap(*args, **kwargs):
-        if 'user_id' not in session or session.get('role') != 'admin':
-            flash('Access denied: Admins only.', 'danger')
-            return redirect(url_for('user_dashboard') if session.get('user_id') else url_for('login'))
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if session.get("role") != "admin":
+            return redirect(url_for("user_dashboard"))
         return f(*args, **kwargs)
-    wrap.__name__ = f.__name__
-    return wrap
+    return wrapper
 
-# --- 5. Shared Routes ---
-
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/login', methods=['GET', 'POST'])
+# -------- AUTH --------
+@app.route("/")
+@app.route("/login")
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
+    return render_template("login.html")
 
-        if user and user.check_password(password):
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['role'] = user.role
-            flash(f'Welcome, {user.username}!', 'success')
-            
-            if user.role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            else:
-                return redirect(url_for('user_dashboard'))
-        else:
-            flash('Invalid username or password.', 'danger')
+@app.route("/firebase-login", methods=["POST"])
+def firebase_login():
+    data = request.get_json()
+    try:
+        decoded = auth.verify_id_token(data["idToken"])
+        email = decoded["email"]
 
-    return render_template('login.html')
+        user = User.query.filter_by(username=email).first()
+        if not user:
+            user = User(username=email, full_name=email.split("@")[0])
+            db.session.add(user)
+            db.session.commit()
 
-@app.route('/logout')
+        session["user_id"] = user.id
+        session["username"] = user.username
+        session["role"] = user.role
+
+        return jsonify({
+            "success": True,
+            "redirect": "/admin" if user.role == "admin" else "/user"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 401
+
+@app.route("/logout")
 def logout():
     session.clear()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for("login"))
 
-@app.route('/results')
-@login_required
-def results():
-    """Displays the results window for published polls."""
-    published_polls = Poll.query.filter_by(results_published=True).all()
-    
-    poll_results = []
-    
-    for poll in published_polls:
-        options = poll.get_options_list()
-        total_votes = Vote.query.filter_by(poll_id=poll.id).count()
-        
-        option_counts = {}
-        for option in options:
-            count = Vote.query.filter_by(poll_id=poll.id, selected_option=option).count()
-            percentage = (count / total_votes * 100) if total_votes > 0 else 0
-            
-            option_counts[option] = {
-                'count': count,
-                'percentage': percentage
-            }
-            
-        poll_results.append({
-            'title': poll.title,
-            'total_votes': total_votes,
-            'counts': option_counts
-        })
+@socketio.on("send_message")
+def handle_message(data):
+    if "user_id" not in session:
+        return
 
-    return render_template('results.html', poll_results=poll_results)
+    msg = ChatMessage(
+        username=session.get("username"),
+        role=session.get("role"),
+        message=data["message"]
+    )
+    db.session.add(msg)
+    db.session.commit()
 
-# --- 6. Admin Routes ---
+    emit("receive_message", {
+        "username": msg.username,
+        "role": msg.role,
+        "message": msg.message,
+        "time": msg.timestamp.strftime("%H:%M")
+    }, broadcast=True)
 
-@app.route('/admin')
+# -------- ADMIN --------
+@app.route("/admin")
 @login_required
 @admin_required
 def admin_dashboard():
-    """Admin home page: lists polls and management links."""
     polls = Poll.query.all()
-    return render_template('admin_dashboard.html', polls=polls)
+    return render_template("admin_dashboard.html", polls=polls)
 
-@app.route('/admin/create_poll', methods=['GET', 'POST'])
+@app.route("/admin/create_poll", methods=["GET", "POST"])
 @login_required
 @admin_required
 def create_poll():
-    """Admin can create a new poll."""
-    if request.method == 'POST':
-        title = request.form.get('title')
-        options_string = request.form.get('options')
-        
-        new_poll = Poll(title=title, options=options_string)
-        db.session.add(new_poll)
+    if request.method == "POST":
+        poll = Poll(
+            title=request.form["title"],
+            options=request.form["options"],
+            allow_multiple="allow_multiple" in request.form
+        )
+        db.session.add(poll)
         db.session.commit()
-        flash(f'Poll "{title}" created successfully!', 'success')
-        return redirect(url_for('admin_dashboard'))
-    
-    return render_template('create_poll.html')
+        return redirect(url_for("admin_dashboard"))
+    return render_template("create_poll.html")
 
-@app.route('/admin/toggle_poll/<int:poll_id>/<action>')
+@app.route("/admin/edit_poll/<int:poll_id>", methods=["GET", "POST"])
 @login_required
 @admin_required
-def toggle_poll(poll_id, action):
-    """Admin can publish/unpublish/publish results/delete polls."""
+def edit_poll(poll_id):
     poll = Poll.query.get_or_404(poll_id)
-    
-    if action == 'publish':
-        poll.is_published = True
-        flash(f'Poll "{poll.title}" is now open for voting.', 'success')
-    elif action == 'unpublish':
-        poll.is_published = False
-        flash(f'Poll "{poll.title}" has been closed for voting.', 'info')
-    elif action == 'publish_results':
-        poll.results_published = True
-        flash(f'Results for "{poll.title}" are now public.', 'success')
-    elif action == 'delete':
-        Vote.query.filter_by(poll_id=poll_id).delete()
-        db.session.delete(poll)
-        flash(f'Poll "{poll.title}" and all votes deleted.', 'danger')
+    if request.method == "POST":
+        poll.title = request.form["title"]
+        poll.options = request.form["options"]
+        poll.allow_multiple = "allow_multiple" in request.form
+        db.session.commit()
+        return redirect(url_for("admin_dashboard"))
+    return render_template("edit_poll.html", poll=poll)
 
+@app.route("/admin/delete_poll/<int:poll_id>")
+@login_required
+@admin_required
+def delete_poll(poll_id):
+    Poll.query.filter_by(id=poll_id).delete()
+    Vote.query.filter_by(poll_id=poll_id).delete()
     db.session.commit()
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for("admin_dashboard"))
 
-# --- Admin User Management Routes ---
+@app.route("/admin/publish_poll/<int:poll_id>")
+@login_required
+@admin_required
+def publish_poll(poll_id):
+    poll = Poll.query.get_or_404(poll_id)
+    poll.is_published = True
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
 
-@app.route('/admin/manage_users')
+@app.route("/admin/unpublish_poll/<int:poll_id>")
+@login_required
+@admin_required
+def unpublish_poll(poll_id):
+    poll = Poll.query.get_or_404(poll_id)
+    poll.is_published = False
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/publish_results/<int:poll_id>")
+@login_required
+@admin_required
+def publish_results(poll_id):
+    poll = Poll.query.get_or_404(poll_id)
+    poll.results_published = True
+    db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/manage_users")
 @login_required
 @admin_required
 def manage_users():
-    """Displays the list of all users for admin management."""
     users = User.query.all()
-    return render_template('manage_users.html', users=users)
+    return render_template("manage_users.html", users=users)
 
-
-@app.route('/admin/create_user', methods=['POST'])
-@login_required
-@admin_required
-def create_user():
-    """Admin can create a new user (or admin) account."""
-    username = request.form.get('username')
-    password = request.form.get('password')
-    role = request.form.get('role', 'user') 
-
-    if User.query.filter_by(username=username).first():
-        flash(f'Username "{username}" already exists.', 'danger')
-        return redirect(url_for('manage_users'))
-
-    new_user = User(username=username, role=role)
-    new_user.set_password(password)
-    
-    db.session.add(new_user)
-    db.session.commit()
-    flash(f'Account for {username} created successfully (Role: {role.upper()})', 'success')
-    return redirect(url_for('manage_users'))
-
-
-@app.route('/admin/toggle_user/<int:user_id>/<action>')
+@app.route("/admin/toggle_user/<int:user_id>/<action>")
 @login_required
 @admin_required
 def toggle_user(user_id, action):
-    """Admin can delete a user or change their role."""
     user = User.query.get_or_404(user_id)
-    
-    if user_id == session['user_id'] and action in ['delete', 'demote']:
-        admin_count = User.query.filter_by(role='admin').count()
-        if admin_count == 1:
-            flash("Cannot delete or demote the last remaining admin.", 'danger')
-            return redirect(url_for('manage_users'))
 
-    if action == 'promote':
-        user.role = 'admin'
-        flash(f'User {user.username} promoted to Admin.', 'info')
-    elif action == 'demote':
-        user.role = 'user'
-        flash(f'User {user.username} demoted to User.', 'info')
-    elif action == 'delete':
-        Vote.query.filter_by(user_id=user_id).delete()
+    if action == "promote":
+        user.role = "admin"
+    elif action == "demote":
+        user.role = "user"
+    elif action == "delete" and user.username != "admin@gmail.com":
         db.session.delete(user)
-        flash(f'User {user.username} and all their votes have been deleted.', 'danger')
-        
+
     db.session.commit()
-    return redirect(url_for('manage_users'))
+    return redirect(url_for("manage_users"))
 
-# --- 7. User Routes ---
+@app.route("/admin/announcement", methods=["GET", "POST"])
+@login_required
+@admin_required
+def announcement():
+    ann = Announcement.query.first()
 
-@app.route('/user')
+    if request.method == "POST":
+        text = request.form.get("message")
+
+        if ann:
+            ann.message = text
+            ann.active = True
+        else:
+            ann = Announcement(message=text)
+            db.session.add(ann)
+
+        db.session.commit()
+        return redirect(url_for("admin_dashboard"))
+
+    return render_template("announcement.html", ann=ann)
+
+
+@app.route("/admin/announcement/delete")
+@login_required
+@admin_required
+def delete_announcement():
+    ann = Announcement.query.first()
+    if ann:
+        db.session.delete(ann)
+        db.session.commit()
+    return redirect(url_for("admin_dashboard"))
+
+@app.context_processor
+def inject_announcement():
+    ann = Announcement.query.filter_by(active=True).first()
+    return dict(global_announcement=ann)
+
+# -------- USER --------
+@app.route("/user")
 @login_required
 def user_dashboard():
-    """User home page: shows available polls to vote on."""
-    user_id = session['user_id']
-    
-    voted_poll_ids = [v.poll_id for v in Vote.query.filter_by(user_id=user_id).all()]
-    
-    active_polls = Poll.query.filter(
-        Poll.is_published == True, 
-        ~Poll.id.in_(voted_poll_ids)
-    ).all()
-    
-    return render_template('user_dashboard.html', active_polls=active_polls)
+    polls = Poll.query.filter_by(is_published=True).all()
+    return render_template("user_dashboard.html", polls=polls)
 
-@app.route('/vote/<int:poll_id>', methods=['GET', 'POST'])
+@app.route("/vote/<int:poll_id>", methods=["GET", "POST"])
 @login_required
 def vote(poll_id):
-    """Handles the voting form and submission."""
     poll = Poll.query.get_or_404(poll_id)
-    user_id = session['user_id']
 
-    if Vote.query.filter_by(user_id=user_id, poll_id=poll_id).first():
-        flash('You have already voted in this poll.', 'warning')
-        return redirect(url_for('user_dashboard'))
+    if Vote.query.filter_by(user_id=session["user_id"], poll_id=poll_id).first():
+        return redirect(url_for("user_dashboard"))
 
-    if not poll.is_published:
-        flash('This poll is not currently open for voting.', 'danger')
-        return redirect(url_for('user_dashboard'))
+    if request.method == "POST":
+        choices = request.form.getlist("option")
+        for c in choices:
+            db.session.add(Vote(
+                user_id=session["user_id"],
+                poll_id=poll_id,
+                selected_option=c
+            ))
+        db.session.commit()
+        return redirect(url_for("user_dashboard"))
 
-    if request.method == 'POST':
-        selected_option = request.form.get('option')
-        
-        if selected_option and selected_option in poll.get_options_list():
-            new_vote = Vote(user_id=user_id, poll_id=poll_id, selected_option=selected_option)
-            db.session.add(new_vote)
-            db.session.commit()
-            flash('Your vote has been cast successfully!', 'success')
-            return redirect(url_for('user_dashboard'))
-        else:
-            flash('Invalid option selected.', 'danger')
+    options = [o.strip() for o in poll.options.split(",")]
+    return render_template("vote.html", poll=poll, options=options)
 
-    return render_template('vote.html', poll=poll)
+@app.route("/results")
+@login_required
+def results():
+    polls = Poll.query.filter_by(results_published=True).all()
+    return render_template("results.html", polls=polls)
 
-@app.route('/profile', methods=['GET', 'POST'])
+# -------- PROFILE --------
+@app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    """Allows a user to view and edit their profile (currently just password)."""
-    user = User.query.get(session['user_id'])
+    user = User.query.get(session["user_id"])
+    if request.method == "POST":
+        user.full_name = request.form["full_name"]
+        if request.form.get("password"):
+            user.password_hash = generate_password_hash(request.form["password"])
+        db.session.commit()
+        return redirect(url_for("profile"))
+    return render_template("profile.html", user=user)
 
-    if request.method == 'POST':
-        new_password = request.form.get('new_password')
-        
-        if new_password:
-            user.set_password(new_password)
-            db.session.commit()
-            flash('Your password has been updated successfully!', 'success')
-            return redirect(url_for('profile')) # Stay on profile page with success message
-        else:
-            flash('New password cannot be empty.', 'danger')
+# -------- RUN --------
+if __name__ == "__main__":
+    socketio.run(app, debug=True)
 
-    return render_template('profile.html', user=user)
-
-# --- 8. Application Run ---
-
-def start_server():
-    with app.app_context():
-        initialize_database()
-    # Listen on all interfaces (0.0.0.0) and use the port provided by Render
-    port = int(os.environ.get('PORT', 5000)) 
-    app.run(host='0.0.0.0', port=port)
-
-if __name__ == '__main__':
-    # This block is only for local testing via 'python app.py'
-    start_server()
