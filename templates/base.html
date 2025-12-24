@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Office Voting System</title>
+<title>VOTING PORTAL</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Bootstrap -->
@@ -405,6 +405,73 @@ body.dark .logout-btn {
   color: #e8ebf1 !important;
 }
 
+/* ===== USER DROPDOWN ===== */
+.user-dropdown .user-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,.15);
+  border: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.user-dropdown .user-btn::after {
+  display: none;
+}
+
+/* Avatar */
+.avatar-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#4f9cff,#00ffd5);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Name + Role */
+.user-text {
+  line-height: 1.1;
+  text-align: left;
+}
+
+.user-name {
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.user-role {
+  font-size: .65rem;
+  opacity: .8;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+body.dark .dropdown-menu {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+body.dark .dropdown-item {
+  color: #e8ebf1;
+}
+
+body.dark .dropdown-item:hover {
+  background: rgba(255,255,255,0.12);
+}
+
 </style>
 </head>
 
@@ -421,7 +488,7 @@ body.dark .logout-btn {
 
     <!-- LEFT: BRAND -->
     <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('user_dashboard') if session.get('role')=='user' else url_for('admin_dashboard') }}">
-      🗳 <span>Office Voting</span>
+      🗳 <span>VOTING PORTAL</span>
     </a>
 
     <!-- MOBILE TOGGLE -->
@@ -436,6 +503,7 @@ body.dark .logout-btn {
       <ul class="navbar-nav mx-auto gap-3">
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('user_dashboard') if session.get('role')=='user' else url_for('admin_dashboard') }}">Home</a>
+        
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('results') }}">Results</a>
@@ -449,20 +517,56 @@ body.dark .logout-btn {
       <div class="d-flex align-items-center gap-3">
 
         <!-- USER NAME -->
-        <div class="user-pill">
-          <i class="fa-solid fa-user"></i>
-          <span>{{ session.get("username") }}</span>
-        </div>
+       <div class="dropdown user-dropdown">
+  <button class="user-btn dropdown-toggle" data-bs-toggle="dropdown">
+    <div class="avatar-circle">
+      {{ session.get("username")[0]|upper }}
+    </div>
+    <div class="user-text d-none d-md-block">
+      <div class="user-name">
+        {% if session.get("username") == "admin@gmail.com" %}
+          Admin
+        {% else %}
+          {% if session.get("username") %}
+  {{ session.get("username")[0]|upper }}
+{% else %}
+  U
+{% endif %}
+
+        {% endif %}
+      </div>
+      <small class="user-role">
+        {{ session.get("role")|upper }}
+      </small>
+    </div>
+  </button>
+
+  <!-- DROPDOWN -->
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li>
+      <a class="dropdown-item" href="{{ url_for('profile') }}">
+        <i class="fa-solid fa-user-gear me-2"></i> Edit Profile
+      </a>
+    </li>
+    <li><hr class="dropdown-divider"></li>
+    <li>
+      <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+        <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
+      </a>
+    </li>
+  </ul>
+</div>
+
 
         <!-- DARK MODE TOGGLE (ICON ONLY) -->
         <button id="themeToggle" class="theme-switch" title="Toggle theme">
           🌙
         </button>
 
-        <!-- LOGOUT -->
+        <!-- LOGOUT
         <a href="{{ url_for('logout') }}" class="logout-btn">
           <i class="fa-solid fa-right-from-bracket"></i>
-        </a>
+        </a> -->
 
       </div>
     </div>
@@ -472,7 +576,7 @@ body.dark .logout-btn {
 
 <div id="navChatBox" class="nav-chat">
     <div class="nav-chat-header">
-        💬 Office Chat
+        💬 CHAT
         <span onclick="toggleNavChat()" style="cursor:pointer">✖</span>
     </div>
     <div id="chatMessages" class="nav-chat-messages"></div>
